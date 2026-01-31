@@ -137,20 +137,33 @@
             }
             .mobile-controls {
                 position: fixed;
-                bottom: 10px;
+                bottom: 0;
                 left: 0;
                 right: 0;
-                padding: 0 30px;
+                padding: 0;
                 z-index: 100;
+                pointer-events: none;
+            }
+            .control-left {
+                position: fixed;
+                left: 20px;
+                bottom: 20px;
+                pointer-events: auto;
+            }
+            .control-right {
+                position: fixed;
+                right: 20px;
+                bottom: 20px;
+                pointer-events: auto;
             }
             .mobile-btn {
-                width: 50px;
-                height: 50px;
-                font-size: 1.2rem;
+                width: 55px;
+                height: 55px;
+                font-size: 1.3rem;
             }
             .jump-btn {
-                width: 65px;
-                height: 65px;
+                width: 70px;
+                height: 70px;
             }
             .controls {
                 display: none;
