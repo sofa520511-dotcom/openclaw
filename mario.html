@@ -171,33 +171,44 @@
 
         /* 平板模式 - 按鈕放兩側 */
         @media (min-width: 768px) {
+            .game-container {
+                margin: 0 100px;
+            }
+            canvas {
+                max-width: calc(100vw - 250px);
+            }
             .mobile-controls {
                 position: fixed;
-                bottom: 50%;
-                transform: translateY(50%);
+                top: 0;
+                bottom: 0;
                 left: 0;
                 right: 0;
-                padding: 0 20px;
                 pointer-events: none;
-            }
-            .control-left, .control-right {
-                pointer-events: auto;
+                margin: 0;
+                padding: 0;
             }
             .control-left {
                 position: fixed;
                 left: 20px;
-                bottom: 30%;
+                top: 50%;
+                transform: translateY(-50%);
+                pointer-events: auto;
+                display: flex;
+                flex-direction: column;
+                gap: 10px;
             }
             .control-right {
                 position: fixed;
                 right: 20px;
-                bottom: 30%;
+                top: 50%;
+                transform: translateY(-50%);
+                pointer-events: auto;
             }
             .mobile-btn {
                 width: 70px;
                 height: 70px;
                 font-size: 1.8rem;
-                background: rgba(255, 255, 255, 0.4);
+                background: rgba(255, 255, 255, 0.5);
             }
             .jump-btn {
                 width: 90px;
