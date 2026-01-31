@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>踩地雷 💣</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            padding: 20px;
+        }
+
+        h1 {
+            color: #fff;
+            font-size: 2.5rem;
+            margin-bottom: 20px;
+            text-shadow: 0 0 20px rgba(255, 107, 107, 0.5);
+        }
+
+        .game-container {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .controls button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+
+        .controls button:hover {
+            transform: translateY(-2px);
+        }
+
+        .btn-easy {
+            background: linear-gradient(135deg, #4ade80, #22c55e);
+            color: white;
+        }
+
+        .btn-medium {
+            background: linear-gradient(135deg, #fbbf24, #f59e0b);
+            color: white;
+        }
+
+        .btn-hard {
+            background: linear-gradient(135deg, #f87171, #ef4444);
+            color: white;
+        }
+
+        .status {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding: 10px 20px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            color: #fff;
+            font-size: 1.2rem;
+        }
+
+        .status span {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .board {
+            display: grid;
+            gap: 2px;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 10px;
+            border-radius: 10px;
+            justify-content: center;
+        }
+
+        .cell {
+            width: 35px;
+            height: 35px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            border-radius: 5px;
+            transition: all 0.15s ease;
+            user-select: none;
+        }
+
+        .cell.hidden {
+            background: linear-gradient(145deg, #6366f1, #4f46e5);
+            box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.3), 
+                        inset 1px 1px 2px rgba(255, 255, 255, 0.2);
+        }
+
+        .cell.hidden:hover {
+            background: linear-gradient(145deg, #818cf8, #6366f1);
+            transform: scale(1.05);
+        }
+
+        .cell.revealed {
+            background: rgba(255, 255, 255, 0.9);
+            color: #1a1a2e;
+            cursor: default;
+        }
+
+        .cell.flagged {
+            background: linear-gradient(145deg, #f97316, #ea580c);
+        }
+
+        .cell.mine {
+            background: linear-gradient(145deg, #ef4444, #dc2626);
+            animation: explode 0.3s ease;
+        }
+
+        @keyframes explode {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.3); }
+            100% { transform: scale(1); }
+        }
+
+        .cell[data-number="1"] { color: #3b82f6; }
+        .cell[data-number="2"] { color: #22c55e; }
+        .cell[data-number="3"] { color: #ef4444; }
+        .cell[data-number="4"] { color: #8b5cf6; }
+        .cell[data-number="5"] { color: #a855f7; }
+        .cell[data-number="6"] { color: #06b6d4; }
+        .cell[data-number="7"] { color: #1a1a2e; }
+        .cell[data-number="8"] { color: #6b7280; }
+
+        .message {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            padding: 30px 50px;
+            border-radius: 20px;
+            font-size: 2rem;
+            text-align: center;
+            z-index: 100;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translate(-50%, -50%) scale(0.8); }
+            to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+        }
+
+        .message.win {
+            border: 3px solid #4ade80;
+            box-shadow: 0 0 30px rgba(74, 222, 128, 0.5);
+        }
+
+        .message.lose {
+            border: 3px solid #ef4444;
+            box-shadow: 0 0 30px rgba(239, 68, 68, 0.5);
+        }
+
+        .instructions {
+            color: rgba(255, 255, 255, 0.7);
+            margin-top: 20px;
+            text-align: center;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+    <h1>💣 踩地雷</h1>
+    <div class="game-container">
+        <div class="controls">
+            <button class="btn-easy" onclick="startGame(9, 9, 10)">簡單 9×9</button>
+            <button class="btn-medium" onclick="startGame(16, 16, 40)">中等 16×16</button>
+            <button class="btn-hard" onclick="startGame(16, 30, 99)">困難 16×30</button>
+        </div>
+        <div class="status">
+            <span>💣 <span id="mines-left">10</span></span>
+            <span>⏱️ <span id="timer">0</span></span>
+        </div>
+        <div class="board" id="board"></div>
+    </div>
+    <p class="instructions">左鍵：揭開 ｜ 右鍵：插旗 🚩</p>
+
+    <script>
+        let rows, cols, totalMines;
+        let board = [];
+        let revealed = [];
+        let flagged = [];
+        let gameOver = false;
+        let firstClick = true;
+        let timer = 0;
+        let timerInterval = null;
+
+        function startGame(r, c, m) {
+            rows = r;
+            cols = c;
+            totalMines = m;
+            board = [];
+            revealed = [];
+            flagged = [];
+            gameOver = false;
+            firstClick = true;
+            timer = 0;
+            
+            if (timerInterval) clearInterval(timerInterval);
+            document.getElementById('timer').textContent = '0';
+            document.getElementById('mines-left').textContent = totalMines;
+            
+            // Remove any message
+            const msg = document.querySelector('.message');
+            if (msg) msg.remove();
+
+            // Initialize arrays
+            for (let i = 0; i < rows; i++) {
+                board[i] = [];
+                revealed[i] = [];
+                flagged[i] = [];
+                for (let j = 0; j < cols; j++) {
+                    board[i][j] = 0;
+                    revealed[i][j] = false;
+                    flagged[i][j] = false;
+                }
+            }
+
+            renderBoard();
+        }
+
+        function placeMines(excludeRow, excludeCol) {
+            let placed = 0;
+            while (placed < totalMines) {
+                const r = Math.floor(Math.random() * rows);
+                const c = Math.floor(Math.random() * cols);
+                
+                // Don't place mine on first click or adjacent cells
+                if (Math.abs(r - excludeRow) <= 1 && Math.abs(c - excludeCol) <= 1) continue;
+                if (board[r][c] === -1) continue;
+
+                board[r][c] = -1;
+                placed++;
+            }
+
+            // Calculate numbers
+            for (let i = 0; i < rows; i++) {
+                for (let j = 0; j < cols; j++) {
+                    if (board[i][j] === -1) continue;
+                    let count = 0;
+                    for (let di = -1; di <= 1; di++) {
+                        for (let dj = -1; dj <= 1; dj++) {
+                            const ni = i + di, nj = j + dj;
+                            if (ni >= 0 && ni < rows && nj >= 0 && nj < cols && board[ni][nj] === -1) {
+                                count++;
+                            }
+                        }
+                    }
+                    board[i][j] = count;
+                }
+            }
+        }
+
+        function renderBoard() {
+            const boardEl = document.getElementById('board');
+            boardEl.style.gridTemplateColumns = `repeat(${cols}, 35px)`;
+            boardEl.innerHTML = '';
+
+            for (let i = 0; i < rows; i++) {
+                for (let j = 0; j < cols; j++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'cell hidden';
+                    cell.dataset.row = i;
+                    cell.dataset.col = j;
+                    cell.addEventListener('click', () => revealCell(i, j));
+                    cell.addEventListener('contextmenu', (e) => {
+                        e.preventDefault();
+                        toggleFlag(i, j);
+                    });
+                    boardEl.appendChild(cell);
+                }
+            }
+        }
+
+        function getCell(row, col) {
+            return document.querySelector(`.cell[data-row="${row}"][data-col="${col}"]`);
+        }
+
+        function revealCell(row, col) {
+            if (gameOver || revealed[row][col] || flagged[row][col]) return;
+
+            if (firstClick) {
+                firstClick = false;
+                placeMines(row, col);
+                timerInterval = setInterval(() => {
+                    timer++;
+                    document.getElementById('timer').textContent = timer;
+                }, 1000);
+            }
+
+            revealed[row][col] = true;
+            const cell = getCell(row, col);
+            cell.classList.remove('hidden');
+            cell.classList.add('revealed');
+
+            if (board[row][col] === -1) {
+                // Hit a mine
+                cell.classList.add('mine');
+                cell.textContent = '💥';
+                endGame(false);
+                return;
+            }
+
+            if (board[row][col] > 0) {
+                cell.textContent = board[row][col];
+                cell.dataset.number = board[row][col];
+            } else {
+                // Reveal adjacent cells for empty cell
+                for (let di = -1; di <= 1; di++) {
+                    for (let dj = -1; dj <= 1; dj++) {
+                        const ni = row + di, nj = col + dj;
+                        if (ni >= 0 && ni < rows && nj >= 0 && nj < cols) {
+                            revealCell(ni, nj);
+                        }
+                    }
+                }
+            }
+
+            checkWin();
+        }
+
+        function toggleFlag(row, col) {
+            if (gameOver || revealed[row][col]) return;
+
+            const cell = getCell(row, col);
+            flagged[row][col] = !flagged[row][col];
+
+            if (flagged[row][col]) {
+                cell.classList.add('flagged');
+                cell.textContent = '🚩';
+            } else {
+                cell.classList.remove('flagged');
+                cell.textContent = '';
+            }
+
+            const flagCount = flagged.flat().filter(f => f).length;
+            document.getElementById('mines-left').textContent = totalMines - flagCount;
+        }
+
+        function checkWin() {
+            let revealedCount = 0;
+            for (let i = 0; i < rows; i++) {
+                for (let j = 0; j < cols; j++) {
+                    if (revealed[i][j]) revealedCount++;
+                }
+            }
+
+            if (revealedCount === rows * cols - totalMines) {
+                endGame(true);
+            }
+        }
+
+        function endGame(won) {
+            gameOver = true;
+            if (timerInterval) clearInterval(timerInterval);
+
+            // Reveal all mines
+            for (let i = 0; i < rows; i++) {
+                for (let j = 0; j < cols; j++) {
+                    if (board[i][j] === -1) {
+                        const cell = getCell(i, j);
+                        cell.classList.remove('hidden');
+                        if (!won) {
+                            cell.classList.add('mine');
+                            cell.textContent = '💣';
+                        } else {
+                            cell.classList.add('flagged');
+                            cell.textContent = '🚩';
+                        }
+                    }
+                }
+            }
+
+            const msg = document.createElement('div');
+            msg.className = `message ${won ? 'win' : 'lose'}`;
+            msg.innerHTML = won 
+                ? `🎉 恭喜過關！<br><small>用時 ${timer} 秒</small>`
+                : `💥 踩到地雷了！<br><small>再試一次吧</small>`;
+            document.body.appendChild(msg);
+
+            setTimeout(() => msg.remove(), 3000);
+        }
+
+        // Start with easy mode
+        startGame(9, 9, 10);
+    </script>
+</body>
+</html>
