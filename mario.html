@@ -66,15 +66,25 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            width: 100%;
-            max-width: 800px;
-            margin-top: 20px;
-            padding: 0 20px;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: 20px;
+            pointer-events: none;
+            z-index: 100;
         }
 
-        .control-left, .control-right {
+        .control-left {
             display: flex;
             gap: 10px;
+            pointer-events: auto;
+        }
+        
+        .control-right {
+            display: flex;
+            gap: 10px;
+            pointer-events: auto;
         }
 
         .mobile-btn {
