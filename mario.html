@@ -114,26 +114,21 @@
         /* 手機橫向 */
         @media (max-height: 500px) and (orientation: landscape) {
             body {
-                padding: 5px;
-                justify-content: flex-start;
+                padding: 10px;
+                justify-content: center;
             }
             .game-header {
-                margin-bottom: 5px;
-            }
-            .game-header h1 {
-                font-size: 1.2rem;
-                margin-bottom: 5px;
-            }
-            .stats {
-                font-size: 0.7rem;
-                gap: 15px;
+                display: none;
             }
             .game-container {
                 padding: 0;
+                margin: 0 120px;
             }
             canvas {
-                max-height: 55vh;
+                max-height: 80vh;
+                max-width: calc(100vw - 280px);
                 width: auto;
+                height: auto;
             }
             .mobile-controls {
                 position: fixed;
@@ -146,24 +141,28 @@
             }
             .control-left {
                 position: fixed;
-                left: 20px;
-                bottom: 20px;
+                left: 15px;
+                bottom: 15px;
                 pointer-events: auto;
+                display: flex;
+                gap: 8px;
             }
             .control-right {
                 position: fixed;
-                right: 20px;
-                bottom: 20px;
+                right: 15px;
+                bottom: 15px;
                 pointer-events: auto;
             }
             .mobile-btn {
-                width: 55px;
-                height: 55px;
-                font-size: 1.3rem;
+                width: 50px;
+                height: 50px;
+                font-size: 1.2rem;
+                background: rgba(255, 255, 255, 0.5);
             }
             .jump-btn {
-                width: 70px;
-                height: 70px;
+                width: 65px;
+                height: 65px;
+                font-size: 0.9rem;
             }
             .controls {
                 display: none;
