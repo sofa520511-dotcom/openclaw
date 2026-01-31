@@ -18,7 +18,7 @@
             align-items: center;
             justify-content: center;
             background: linear-gradient(180deg, #5c94fc 0%, #5c94fc 60%, #8b4513 100%);
-            font-family: 'Press Start 2P', 'Courier New', monospace;
+            font-family: 'Segoe UI', 'Courier New', monospace;
             overflow: hidden;
         }
 
@@ -36,8 +36,10 @@
 
         .stats {
             display: flex;
-            gap: 30px;
+            gap: 25px;
             font-size: 0.9rem;
+            flex-wrap: wrap;
+            justify-content: center;
         }
 
         .game-container {
@@ -109,7 +111,7 @@
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            background: rgba(0, 0, 0, 0.85);
+            background: rgba(0, 0, 0, 0.9);
             color: white;
             padding: 30px 50px;
             border-radius: 10px;
@@ -129,10 +131,40 @@
             color: white;
             border: none;
             border-radius: 5px;
+            margin-left: 5px;
+            margin-right: 5px;
         }
 
         .message button:hover {
             background: #ff3b30;
+        }
+
+        .message button.green {
+            background: #22c55e;
+        }
+
+        .message button.green:hover {
+            background: #16a34a;
+        }
+
+        .level-indicator {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.7);
+            color: #ffd700;
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-size: 1rem;
+            font-weight: bold;
+            z-index: 50;
+            animation: fadeOut 2s forwards;
+            animation-delay: 1s;
+        }
+
+        @keyframes fadeOut {
+            to { opacity: 0; }
         }
     </style>
 </head>
@@ -140,6 +172,7 @@
     <div class="game-header">
         <h1>🍄 超級瑪利歐</h1>
         <div class="stats">
+            <span>關卡: <span id="level">1</span>/10 🏰</span>
             <span>金幣: <span id="coins">0</span> 🪙</span>
             <span>分數: <span id="score">0</span></span>
             <span>生命: <span id="lives">3</span> ❤️</span>
@@ -167,8 +200,10 @@
         let coins = 0;
         let score = 0;
         let lives = 3;
+        let currentLevel = 1;
         let cameraX = 0;
         let levelComplete = false;
+        let totalLevels = 10;
 
         // Mario
         const mario = {
@@ -190,53 +225,161 @@
         const gravity = 0.6;
         const friction = 0.8;
 
-        // Level design
-        const platforms = [
-            // Ground
-            { x: 0, y: 360, width: 500, height: 40, type: 'ground' },
-            { x: 550, y: 360, width: 300, height: 40, type: 'ground' },
-            { x: 900, y: 360, width: 600, height: 40, type: 'ground' },
-            { x: 1600, y: 360, width: 800, height: 40, type: 'ground' },
+        // Level data
+        let platforms = [];
+        let coinList = [];
+        let enemies = [];
+        let flag = { x: 2000, y: 160, width: 10, height: 200 };
+        let levelLength = 2000;
+
+        // Level generation based on difficulty
+        function generateLevel(level) {
+            platforms = [];
+            coinList = [];
+            enemies = [];
+
+            // Difficulty scaling
+            const difficulty = level;
+            const gapChance = 0.1 + (level * 0.03); // More gaps at higher levels
+            const enemySpeed = 1.5 + (level * 0.2); // Faster enemies
+            const enemyCount = 3 + Math.floor(level * 1.5); // More enemies
+            const platformCount = Math.max(4, 10 - Math.floor(level * 0.5)); // Fewer platforms
+            levelLength = 1500 + (level * 200); // Longer levels
             
-            // Platforms
-            { x: 200, y: 280, width: 100, height: 20, type: 'brick' },
-            { x: 350, y: 200, width: 60, height: 20, type: 'question' },
-            { x: 600, y: 260, width: 80, height: 20, type: 'brick' },
-            { x: 750, y: 180, width: 100, height: 20, type: 'brick' },
-            { x: 950, y: 280, width: 60, height: 20, type: 'question' },
-            { x: 1100, y: 200, width: 120, height: 20, type: 'brick' },
-            { x: 1300, y: 260, width: 60, height: 20, type: 'question' },
-            { x: 1450, y: 180, width: 80, height: 20, type: 'brick' },
-            { x: 1700, y: 250, width: 100, height: 20, type: 'brick' },
-            { x: 1900, y: 180, width: 60, height: 20, type: 'question' },
-        ];
+            // Generate ground with gaps
+            let groundX = 0;
+            const groundSegments = [];
+            
+            while (groundX < levelLength + 500) {
+                const segmentLength = 200 + Math.random() * 300;
+                groundSegments.push({ x: groundX, width: segmentLength });
+                groundX += segmentLength;
+                
+                // Add gap based on difficulty
+                if (Math.random() < gapChance && groundX < levelLength) {
+                    const gapWidth = 80 + Math.random() * (40 + level * 10);
+                    groundX += gapWidth;
+                }
+            }
 
-        // Coins
-        let coinList = [
-            { x: 230, y: 240, collected: false },
-            { x: 370, y: 160, collected: false },
-            { x: 620, y: 220, collected: false },
-            { x: 780, y: 140, collected: false },
-            { x: 970, y: 240, collected: false },
-            { x: 1140, y: 160, collected: false },
-            { x: 1320, y: 220, collected: false },
-            { x: 1480, y: 140, collected: false },
-            { x: 1730, y: 210, collected: false },
-            { x: 1920, y: 140, collected: false },
-        ];
+            // Add ground platforms
+            for (const seg of groundSegments) {
+                platforms.push({
+                    x: seg.x,
+                    y: 360,
+                    width: seg.width,
+                    height: 40,
+                    type: 'ground'
+                });
+            }
 
-        // Enemies (Goombas)
-        let enemies = [
-            { x: 400, y: 328, width: 32, height: 32, vx: -1.5, alive: true },
-            { x: 700, y: 328, width: 32, height: 32, vx: -1.5, alive: true },
-            { x: 1000, y: 328, width: 32, height: 32, vx: -1.5, alive: true },
-            { x: 1250, y: 328, width: 32, height: 32, vx: 1.5, alive: true },
-            { x: 1550, y: 328, width: 32, height: 32, vx: -1.5, alive: true },
-            { x: 1800, y: 328, width: 32, height: 32, vx: -1.5, alive: true },
-        ];
+            // Generate floating platforms
+            const platformSpacing = levelLength / (platformCount + 1);
+            for (let i = 0; i < platformCount; i++) {
+                const px = 150 + i * platformSpacing + Math.random() * 100;
+                const py = 180 + Math.random() * 120;
+                const pwidth = 60 + Math.random() * 60;
+                const ptype = Math.random() > 0.7 ? 'question' : 'brick';
+                
+                platforms.push({
+                    x: px,
+                    y: py,
+                    width: pwidth,
+                    height: 20,
+                    type: ptype
+                });
 
-        // Flag
-        const flag = { x: 2100, y: 160, width: 10, height: 200 };
+                // Add coin above platform
+                if (Math.random() > 0.3) {
+                    coinList.push({
+                        x: px + pwidth / 2,
+                        y: py - 40,
+                        collected: false
+                    });
+                }
+            }
+
+            // Add some coins on ground
+            for (let i = 0; i < 5 + level; i++) {
+                const cx = 200 + Math.random() * (levelLength - 300);
+                coinList.push({
+                    x: cx,
+                    y: 320,
+                    collected: false
+                });
+            }
+
+            // Generate enemies
+            for (let i = 0; i < enemyCount; i++) {
+                const ex = 300 + (i * (levelLength - 400) / enemyCount);
+                
+                // Find ground at this position
+                let groundY = 360;
+                for (const plat of platforms) {
+                    if (plat.type === 'ground' && ex >= plat.x && ex <= plat.x + plat.width) {
+                        groundY = plat.y;
+                        break;
+                    }
+                }
+
+                // Different enemy types at higher levels
+                const enemyType = level >= 5 && Math.random() > 0.6 ? 'koopa' : 'goomba';
+                const speed = enemySpeed * (enemyType === 'koopa' ? 1.3 : 1);
+
+                enemies.push({
+                    x: ex,
+                    y: groundY - 32,
+                    width: 32,
+                    height: 32,
+                    vx: (Math.random() > 0.5 ? 1 : -1) * speed,
+                    alive: true,
+                    type: enemyType
+                });
+            }
+
+            // Special challenges for later levels
+            if (level >= 7) {
+                // Add moving platforms
+                for (let i = 0; i < level - 5; i++) {
+                    platforms.push({
+                        x: 400 + i * 300,
+                        y: 250,
+                        width: 80,
+                        height: 20,
+                        type: 'moving',
+                        startX: 400 + i * 300,
+                        moveRange: 100,
+                        moveSpeed: 1 + level * 0.1
+                    });
+                }
+            }
+
+            // Flag position
+            flag = { x: levelLength, y: 160, width: 10, height: 200 };
+
+            // Level-specific backgrounds
+            updateBackground(level);
+        }
+
+        function updateBackground(level) {
+            // Different sky colors for different worlds
+            const backgrounds = [
+                '#5c94fc', // Classic blue
+                '#5c94fc',
+                '#87CEEB', // Light blue
+                '#87CEEB',
+                '#ff9966', // Sunset
+                '#ff9966',
+                '#2c1654', // Night
+                '#2c1654',
+                '#1a0a2e', // Dark night
+                '#ff4444', // Lava red
+            ];
+            
+            const bg = backgrounds[Math.min(level - 1, backgrounds.length - 1)];
+            canvas.style.background = `linear-gradient(180deg, ${bg} 0%, ${bg} 70%, transparent 70%)`;
+            document.body.style.background = `linear-gradient(180deg, ${bg} 0%, ${bg} 60%, #8b4513 100%)`;
+        }
 
         // Input
         const keys = {};
@@ -262,6 +405,16 @@
         function update() {
             if (!gameRunning || levelComplete) return;
 
+            // Update moving platforms
+            for (const plat of platforms) {
+                if (plat.type === 'moving') {
+                    plat.x += plat.moveSpeed;
+                    if (plat.x > plat.startX + plat.moveRange || plat.x < plat.startX - plat.moveRange) {
+                        plat.moveSpeed *= -1;
+                    }
+                }
+            }
+
             // Input
             if (keys['ArrowLeft'] || keys['KeyA']) {
                 mario.vx = -mario.speed;
@@ -283,6 +436,9 @@
             mario.x += mario.vx;
             mario.y += mario.vy;
 
+            // Keep mario from going left of start
+            if (mario.x < 0) mario.x = 0;
+
             // Animation
             if (Math.abs(mario.vx) > 0.5) {
                 mario.frameTimer++;
@@ -303,6 +459,11 @@
                             mario.y = plat.y - mario.height;
                             mario.vy = 0;
                             mario.grounded = true;
+                            
+                            // Move with moving platform
+                            if (plat.type === 'moving') {
+                                mario.x += plat.moveSpeed;
+                            }
                         }
                     }
                 }
@@ -328,60 +489,82 @@
 
                 enemy.x += enemy.vx;
 
-                // Enemy platform check
+                // Enemy boundary check
                 for (const plat of platforms) {
                     if (plat.type === 'ground') {
-                        if (enemy.x < plat.x || enemy.x + enemy.width > plat.x + plat.width) {
-                            if (enemy.y + enemy.height >= plat.y) {
+                        if (enemy.x >= plat.x && enemy.x + enemy.width <= plat.x + plat.width) {
+                            // On this platform
+                        } else if (enemy.y + enemy.height >= plat.y - 5) {
+                            // Check if about to fall off
+                            let onPlatform = false;
+                            for (const p2 of platforms) {
+                                if (p2.type === 'ground' && enemy.x >= p2.x && enemy.x + enemy.width <= p2.x + p2.width) {
+                                    onPlatform = true;
+                                    break;
+                                }
+                            }
+                            if (!onPlatform && enemy.y < 350) {
                                 enemy.vx *= -1;
                             }
                         }
                     }
                 }
 
+                // Screen boundary
+                if (enemy.x < 0 || enemy.x > levelLength + 200) {
+                    enemy.vx *= -1;
+                }
+
                 // Mario vs Enemy
-                if (mario.x + mario.width > enemy.x && mario.x < enemy.x + enemy.width &&
+                if (mario.x + mario.width > enemy.x + 5 && mario.x + 5 < enemy.x + enemy.width &&
                     mario.y + mario.height > enemy.y && mario.y < enemy.y + enemy.height) {
                     
-                    if (mario.vy > 0 && mario.y + mario.height < enemy.y + enemy.height / 2 + mario.vy) {
+                    if (mario.vy > 0 && mario.y + mario.height < enemy.y + enemy.height / 2 + mario.vy + 5) {
                         // Stomp enemy
                         enemy.alive = false;
                         mario.vy = -10;
-                        score += 200;
+                        score += 200 * currentLevel; // More points at higher levels
                         updateStats();
                     } else {
                         // Hit by enemy
-                        lives--;
-                        updateStats();
-                        if (lives <= 0) {
-                            gameOver();
-                        } else {
-                            resetMario();
-                        }
+                        loseLife();
                     }
                 }
             }
 
             // Fall death
             if (mario.y > 500) {
-                lives--;
-                updateStats();
-                if (lives <= 0) {
-                    gameOver();
-                } else {
-                    resetMario();
-                }
+                loseLife();
             }
 
             // Camera
             cameraX = mario.x - canvas.width / 3;
             if (cameraX < 0) cameraX = 0;
-            if (cameraX > 1500) cameraX = 1500;
+            if (cameraX > levelLength - canvas.width + 200) cameraX = levelLength - canvas.width + 200;
 
             // Level complete
             if (mario.x > flag.x) {
                 levelComplete = true;
-                showMessage('🎉 恭喜過關！', `分數: ${score}`, true);
+                const bonus = (10 - Math.floor((Date.now() % 100000) / 10000)) * 100 * currentLevel;
+                score += bonus;
+                updateStats();
+                
+                if (currentLevel >= totalLevels) {
+                    showMessage('🎊 恭喜全破！', `最終分數: ${score}<br>你是真正的超級瑪利歐！`, 'complete');
+                } else {
+                    showMessage(`🎉 第 ${currentLevel} 關過關！`, `分數: ${score}<br>獎勵: +${bonus}`, 'nextLevel');
+                }
+            }
+        }
+
+        function loseLife() {
+            lives--;
+            updateStats();
+            if (lives <= 0) {
+                gameRunning = false;
+                showMessage('💀 遊戲結束', `最終分數: ${score}<br>到達第 ${currentLevel} 關`, 'gameOver');
+            } else {
+                resetMarioPosition();
             }
         }
 
@@ -393,21 +576,25 @@
             ctx.save();
             ctx.translate(-cameraX, 0);
 
-            // Clouds
-            drawClouds();
+            // Background elements
+            drawBackground();
 
             // Platforms
             for (const plat of platforms) {
                 if (plat.type === 'ground') {
-                    // Ground pattern
-                    ctx.fillStyle = '#8b4513';
+                    ctx.fillStyle = currentLevel >= 9 ? '#4a1a1a' : '#8b4513';
                     ctx.fillRect(plat.x, plat.y, plat.width, plat.height);
-                    ctx.fillStyle = '#228b22';
+                    ctx.fillStyle = currentLevel >= 9 ? '#ff4444' : '#228b22';
                     ctx.fillRect(plat.x, plat.y, plat.width, 10);
                 } else if (plat.type === 'brick') {
                     drawBrick(plat.x, plat.y, plat.width, plat.height);
                 } else if (plat.type === 'question') {
                     drawQuestionBlock(plat.x, plat.y, plat.width, plat.height);
+                } else if (plat.type === 'moving') {
+                    ctx.fillStyle = '#888';
+                    ctx.fillRect(plat.x, plat.y, plat.width, plat.height);
+                    ctx.fillStyle = '#aaa';
+                    ctx.fillRect(plat.x, plat.y, plat.width, 5);
                 }
             }
 
@@ -421,7 +608,11 @@
             // Enemies
             for (const enemy of enemies) {
                 if (enemy.alive) {
-                    drawGoomba(enemy.x, enemy.y, enemy.width, enemy.height);
+                    if (enemy.type === 'koopa') {
+                        drawKoopa(enemy.x, enemy.y, enemy.width, enemy.height, enemy.vx);
+                    } else {
+                        drawGoomba(enemy.x, enemy.y, enemy.width, enemy.height);
+                    }
                 }
             }
 
@@ -432,30 +623,59 @@
             drawMario();
 
             ctx.restore();
+
+            // Level indicator on screen
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+            ctx.fillRect(10, 10, 80, 30);
+            ctx.fillStyle = '#ffd700';
+            ctx.font = 'bold 14px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText(`W${currentLevel}`, 50, 30);
         }
 
-        function drawClouds() {
-            ctx.fillStyle = 'white';
-            const clouds = [100, 400, 700, 1100, 1500, 1900];
-            for (let i = 0; i < clouds.length; i++) {
-                const x = clouds[i];
-                const y = 50 + (i % 3) * 30;
+        function drawBackground() {
+            // Clouds
+            ctx.fillStyle = currentLevel >= 7 ? 'rgba(255,255,255,0.3)' : 'white';
+            const cloudOffset = cameraX * 0.3;
+            for (let i = 0; i < 10; i++) {
+                const x = i * 300 - (cloudOffset % 300);
+                const y = 40 + (i % 3) * 30;
                 ctx.beginPath();
                 ctx.arc(x, y, 25, 0, Math.PI * 2);
                 ctx.arc(x + 30, y - 10, 30, 0, Math.PI * 2);
                 ctx.arc(x + 60, y, 25, 0, Math.PI * 2);
                 ctx.fill();
             }
+
+            // Hills (parallax)
+            if (currentLevel < 7) {
+                ctx.fillStyle = '#228b22';
+                for (let i = 0; i < 8; i++) {
+                    const hx = i * 400 - (cameraX * 0.2 % 400);
+                    ctx.beginPath();
+                    ctx.arc(hx, 360, 80 + (i % 2) * 30, Math.PI, 0);
+                    ctx.fill();
+                }
+            }
+
+            // Stars for night levels
+            if (currentLevel >= 7) {
+                ctx.fillStyle = 'white';
+                for (let i = 0; i < 50; i++) {
+                    const sx = (i * 137 + cameraX * 0.1) % (levelLength + 500);
+                    const sy = (i * 73) % 200;
+                    ctx.fillRect(sx, sy, 2, 2);
+                }
+            }
         }
 
         function drawBrick(x, y, w, h) {
-            ctx.fillStyle = '#c84c0c';
+            ctx.fillStyle = currentLevel >= 9 ? '#8b0000' : '#c84c0c';
             ctx.fillRect(x, y, w, h);
             ctx.strokeStyle = '#000';
             ctx.lineWidth = 2;
             ctx.strokeRect(x, y, w, h);
-            // Brick pattern
-            ctx.strokeStyle = '#8b3000';
+            ctx.strokeStyle = currentLevel >= 9 ? '#5a0000' : '#8b3000';
             for (let i = 0; i < w; i += 20) {
                 ctx.beginPath();
                 ctx.moveTo(x + i, y);
@@ -477,33 +697,27 @@
         }
 
         function drawCoin(x, y) {
+            const wobble = Math.sin(Date.now() / 200) * 2;
             ctx.fillStyle = '#ffd700';
             ctx.beginPath();
-            ctx.ellipse(x, y, 10, 12, 0, 0, Math.PI * 2);
+            ctx.ellipse(x, y + wobble, 10, 12, 0, 0, Math.PI * 2);
             ctx.fill();
             ctx.strokeStyle = '#daa520';
             ctx.lineWidth = 2;
             ctx.stroke();
-            ctx.fillStyle = '#daa520';
-            ctx.font = 'bold 10px Arial';
-            ctx.textAlign = 'center';
-            ctx.fillText('$', x, y + 4);
         }
 
         function drawGoomba(x, y, w, h) {
-            // Body
             ctx.fillStyle = '#8b4513';
             ctx.beginPath();
             ctx.ellipse(x + w / 2, y + h / 2 + 5, w / 2, h / 2 - 5, 0, 0, Math.PI * 2);
             ctx.fill();
             
-            // Head
             ctx.fillStyle = '#a0522d';
             ctx.beginPath();
             ctx.ellipse(x + w / 2, y + 8, w / 2 + 2, 12, 0, Math.PI, Math.PI * 2);
             ctx.fill();
             
-            // Eyes
             ctx.fillStyle = 'white';
             ctx.beginPath();
             ctx.ellipse(x + 10, y + 12, 5, 6, 0, 0, Math.PI * 2);
@@ -516,19 +730,43 @@
             ctx.arc(x + 22, y + 13, 2, 0, Math.PI * 2);
             ctx.fill();
             
-            // Feet
             ctx.fillStyle = '#000';
             ctx.fillRect(x + 2, y + h - 5, 10, 5);
             ctx.fillRect(x + w - 12, y + h - 5, 10, 5);
         }
 
+        function drawKoopa(x, y, w, h, vx) {
+            // Shell
+            ctx.fillStyle = '#22c55e';
+            ctx.beginPath();
+            ctx.ellipse(x + w / 2, y + h / 2 + 5, w / 2 + 2, h / 2, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = '#15803d';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            // Head
+            ctx.fillStyle = '#fbbf24';
+            ctx.beginPath();
+            ctx.ellipse(x + (vx > 0 ? w - 5 : 5), y + 8, 10, 10, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Eyes
+            ctx.fillStyle = 'white';
+            ctx.beginPath();
+            ctx.arc(x + (vx > 0 ? w - 5 : 5), y + 6, 4, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = 'black';
+            ctx.beginPath();
+            ctx.arc(x + (vx > 0 ? w - 3 : 7), y + 6, 2, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
         function drawFlag(x, y) {
-            // Pole
             ctx.fillStyle = '#228b22';
             ctx.fillRect(x, y, 8, 200);
             
-            // Flag
-            ctx.fillStyle = '#ff0000';
+            ctx.fillStyle = currentLevel >= totalLevels ? '#ffd700' : '#ff0000';
             ctx.beginPath();
             ctx.moveTo(x + 8, y);
             ctx.lineTo(x + 60, y + 25);
@@ -536,11 +774,16 @@
             ctx.closePath();
             ctx.fill();
             
-            // Ball on top
             ctx.fillStyle = '#ffd700';
             ctx.beginPath();
             ctx.arc(x + 4, y, 8, 0, Math.PI * 2);
             ctx.fill();
+
+            // Level number on flag
+            ctx.fillStyle = 'white';
+            ctx.font = 'bold 12px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText(currentLevel, x + 35, y + 30);
         }
 
         function drawMario() {
@@ -580,22 +823,17 @@
             ctx.fillStyle = '#0066cc';
             ctx.fillRect(x + 6, y + 32, 20, 8);
 
-            // Legs
-            const legOffset = mario.frame === 1 ? 2 : (mario.frame === 2 ? -2 : 0);
-            ctx.fillStyle = '#0066cc';
-            ctx.fillRect(x + 6, y + 32, 8, 8);
-            ctx.fillRect(x + 18, y + 32, 8, 8);
-
             ctx.restore();
         }
 
         function updateStats() {
+            document.getElementById('level').textContent = currentLevel;
             document.getElementById('coins').textContent = coins;
             document.getElementById('score').textContent = score;
             document.getElementById('lives').textContent = lives;
         }
 
-        function resetMario() {
+        function resetMarioPosition() {
             mario.x = 50;
             mario.y = 300;
             mario.vx = 0;
@@ -603,53 +841,63 @@
             cameraX = 0;
         }
 
+        function nextLevel() {
+            currentLevel++;
+            levelComplete = false;
+            generateLevel(currentLevel);
+            resetMarioPosition();
+            updateStats();
+            hideMessage();
+            showLevelIndicator();
+        }
+
         function resetGame() {
-            mario.x = 50;
-            mario.y = 300;
-            mario.vx = 0;
-            mario.vy = 0;
-            cameraX = 0;
+            currentLevel = 1;
             coins = 0;
             score = 0;
             lives = 3;
             levelComplete = false;
             gameRunning = true;
-
-            // Reset coins
-            for (const coin of coinList) {
-                coin.collected = false;
-            }
-
-            // Reset enemies
-            enemies = [
-                { x: 400, y: 328, width: 32, height: 32, vx: -1.5, alive: true },
-                { x: 700, y: 328, width: 32, height: 32, vx: -1.5, alive: true },
-                { x: 1000, y: 328, width: 32, height: 32, vx: -1.5, alive: true },
-                { x: 1250, y: 328, width: 32, height: 32, vx: 1.5, alive: true },
-                { x: 1550, y: 328, width: 32, height: 32, vx: -1.5, alive: true },
-                { x: 1800, y: 328, width: 32, height: 32, vx: -1.5, alive: true },
-            ];
-
+            generateLevel(currentLevel);
+            resetMarioPosition();
             updateStats();
             hideMessage();
+            showLevelIndicator();
         }
 
-        function gameOver() {
-            gameRunning = false;
-            showMessage('💀 遊戲結束', `最終分數: ${score}`, true);
+        function showLevelIndicator() {
+            const existing = document.querySelector('.level-indicator');
+            if (existing) existing.remove();
+            
+            const indicator = document.createElement('div');
+            indicator.className = 'level-indicator';
+            indicator.textContent = `World ${currentLevel}`;
+            document.querySelector('.game-container').appendChild(indicator);
+            
+            setTimeout(() => indicator.remove(), 3000);
         }
 
-        function showMessage(title, subtitle, showButton) {
+        function showMessage(title, subtitle, type) {
             let msg = document.querySelector('.message');
             if (!msg) {
                 msg = document.createElement('div');
                 msg.className = 'message';
                 document.querySelector('.game-container').appendChild(msg);
             }
+
+            let buttons = '';
+            if (type === 'nextLevel') {
+                buttons = '<button class="green" onclick="nextLevel()">下一關 →</button>';
+            } else if (type === 'gameOver') {
+                buttons = '<button onclick="resetGame()">重新開始</button>';
+            } else if (type === 'complete') {
+                buttons = '<button class="green" onclick="resetGame()">再玩一次</button>';
+            }
+
             msg.innerHTML = `
                 <div>${title}</div>
                 <div style="font-size: 0.8rem; margin-top: 10px;">${subtitle}</div>
-                ${showButton ? '<button onclick="resetGame()">再玩一次</button>' : ''}
+                ${buttons}
             `;
             msg.style.display = 'block';
         }
@@ -665,6 +913,9 @@
             requestAnimationFrame(gameLoop);
         }
 
+        // Initialize
+        generateLevel(1);
+        showLevelIndicator();
         gameLoop();
     </script>
 </body>
