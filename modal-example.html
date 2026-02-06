@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>彈跳視窗範例</title>
+    <style>
+        /* 基本樣式 */
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f2f5;
+        }
+
+        /* 按鈕樣式 */
+        .btn-open {
+            padding: 12px 24px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s;
+        }
+
+        .btn-open:hover {
+            background-color: #0056b3;
+        }
+
+        /* 彈跳視窗遮罩層 (Modal Overlay) */
+        .modal-overlay {
+            display: none; /* 預設隱藏 */
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5); /* 半透明黑色背景 */
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        /* 彈跳視窗本體 (Modal Content) */
+        .modal-content {
+            background-color: white;
+            padding: 0; /* 移除內距，讓標題貼邊 */
+            border-radius: 8px; /* 圓角稍微小一點，像圖中那樣 */
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+            max-width: 800px; /* 寬度加寬以容納表格 */
+            width: 95%;
+            text-align: left;
+            transform: translateY(-20px);
+            transition: transform 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden; /* 確保圓角不被切掉 */
+        }
+
+        /* 標題區域 */
+        .modal-header {
+            padding: 15px 20px;
+            background-color: #fff;
+            border-bottom: 1px solid #ddd;
+            display: flex;
+            justify-content: center; /* 標題置中 */
+            align-items: center;
+            position: relative;
+        }
+
+        .modal-header h2 {
+            margin: 0;
+            color: #7f9db9; /* 模仿圖片中的淡藍色標題 */
+            font-size: 24px;
+            font-weight: normal;
+        }
+
+        /* 表格容器 */
+        .table-container {
+            padding: 20px;
+            overflow-x: auto; /* 支援手機橫向捲動 */
+        }
+
+        /* 表格樣式 */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 15px;
+            border: 1px solid #000;
+        }
+
+        th, td {
+            border: 1px solid #000; /* 黑色邊框 */
+            padding: 8px 12px;
+            text-align: left;
+            vertical-align: top;
+        }
+
+        /* 第一欄 (B0-B11) 置中 */
+        td:first-child, th:first-child {
+            text-align: center;
+        }
+
+        /* 底部區域 */
+        .modal-footer {
+            padding: 15px;
+            display: flex;
+            justify-content: center;
+            background-color: #fff;
+        }
+
+        /* 底部關閉按鈕樣式 (模仿圖片) */
+        .btn-close {
+            padding: 8px 30px;
+            background-color: #ddd; /* 灰色背景 */
+            color: #555;
+            border: 1px solid #aaa;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .btn-close:hover {
+            background-color: #ccc;
+        }
+
+        /* 右上角 X 按鈕 (隱藏或保留看需求，這邊先做隱藏式) */
+        .btn-close-icon {
+            display: none; 
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 觸發按鈕 -->
+    <button class="btn-open" onclick="openModal()">打開彈跳視窗</button>
+
+    <!-- 彈跳視窗結構 -->
+    <div class="modal-overlay" id="myModal">
+        <div class="modal-content">
+            <!-- 標題區域 -->
+            <div class="modal-header">
+                <h2>文件目錄</h2>
+                <!-- 關閉按鈕 (X) -->
+                <button class="btn-close-icon" onclick="closeModal()">&times;</button>
+            </div>
+            
+            <!-- 表格內容 -->
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width: 15%;">編號</th>
+                            <th style="width: 35%;">項目名稱</th>
+                            <th style="width: 50%;">說明</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>B0</td><td>DWG檔案</td><td></td></tr>
+                        <tr><td>B1</td><td>建築線指示(定)申請書</td><td>含涉會勘或現有巷道案件之正式申請書件</td></tr>
+                        <tr><td>B2</td><td>建築線指示(定)委託書</td><td>授權代理申請之委託文件</td></tr>
+                        <tr><td>B3</td><td>建築線指定申請書圖</td><td>申請所附位置圖、界線示意圖等圖面資料</td></tr>
+                        <tr><td>B4</td><td>基地現況照片</td><td>現場環境、巷道、界線等現況紀錄照片</td></tr>
+                        <tr><td>B5</td><td>地籍圖謄本</td><td>作為建築線判定之正式段號地號圖資</td></tr>
+                        <tr><td>B6</td><td>現有巷道認定資料</td><td>用以佐證巷道之權屬機關資料或證明文件</td></tr>
+                        <tr><td>B7</td><td>都市計畫相關資料</td><td>包含都市計畫書、計畫圖等相關圖冊</td></tr>
+                        <tr><td>B8</td><td>土地使用分區管制要點</td><td>土地使用分區規範及建築相關使用限制資料</td></tr>
+                        <tr><td>B9</td><td>都市計畫樁位相關資料</td><td>都市計畫樁位置、測量紀錄之相關資料</td></tr>
+                        <tr><td>B10</td><td>其他建築線相關資料</td><td>非上述類別之補充或特殊文件</td></tr>
+                        <tr><td>B11</td><td>前指定案相關文件</td><td>前案指定建築線相關文件</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- 底部關閉按鈕 -->
+            <div class="modal-footer">
+                <button class="btn-close" onclick="closeModal()">ⓧ 關閉</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 開啟視窗
+        function openModal() {
+            const modal = document.getElementById('myModal');
+            modal.style.display = 'flex';
+            // 使用 setTimeout 讓 CSS transition 有效
+            setTimeout(() => {
+                modal.classList.add('show');
+            }, 10);
+        }
+
+        // 關閉視窗
+        function closeModal() {
+            const modal = document.getElementById('myModal');
+            modal.classList.remove('show');
+            // 等待動畫結束後再隱藏
+            setTimeout(() => {
+                modal.style.display = 'none';
+            }, 300);
+        }
+
+        // 點擊遮罩層也可以關閉
+        window.onclick = function(event) {
+            const modal = document.getElementById('myModal');
+            if (event.target == modal) {
+                closeModal();
+            }
+        }
+    </script>
+
+</body>
+</html>
