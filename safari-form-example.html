@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Safari Iframe Form Submit</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f2f5;
+        }
+
+        /* 觸發按鈕樣式 */
+        #startBtn {
+            padding: 15px 30px;
+            font-size: 18px;
+            color: #fff;
+            background-color: #007bff;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+
+        /* 遮罩層 (預設隱藏) */
+        #safari-guide-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.6);
+            z-index: 9999;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* 提示框內容 */
+        .guide-box {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            text-align: center;
+            width: 80%;
+            max-width: 320px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+        }
+
+        .guide-box h3 {
+            margin-top: 0;
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        /* Safari 確認按鈕 (關鍵) */
+        #safari-confirm-btn {
+            display: inline-block;
+            width: 100%;
+            padding: 12px 0;
+            font-size: 16px;
+            font-weight: bold;
+            color: white;
+            background-color: #28a745; /* 綠色 */
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            /* iOS 點擊優化 */
+            -webkit-appearance: none;
+            touch-action: manipulation;
+        }
+
+        #safari-confirm-btn:active {
+            background-color: #1e7e34;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 1. 這是觸發流程的按鈕 -->
+    <button id="startBtn">開啟新視窗 (測試 Form POST)</button>
+
+    <!-- 2. 這是 Safari 專用的遮罩與確認按鈕 -->
+    <div id="safari-guide-overlay">
+        <div class="guide-box">
+            <h3>即將開啟視窗</h3>
+            <p>請點擊下方按鈕繼續</p>
+            <!-- class 裡面抓的就是這個 id -->
+            <button id="safari-confirm-btn">確認前往</button>
+        </div>
+    </div>
+
+    <script>
+        // === 您提供的 class 定義 (完全照貼) ===
+        class iframeform {
+            constructor(url, target) {
+                this.url = url;
+                this.form = $('<form>', {
+                    action: url,
+                    method: 'POST',
+                    target: '_blank'
+                });
+
+            }
+            init(self = this) {
+
+            }
+            addParameter(parameter, value) {
+                let self = this;
+                self.form.append($('<input>', {
+                    type: 'hidden',
+                    name: parameter,
+                    value: value
+                }));
+            }
+            // 偵測是否為 iOS Safari
+            isIosSafari() {
+                // 原程式碼這裡寫死 true 方便測試，正式環境您可以改回判斷邏輯
+                return true;
+                const ua = window.navigator.userAgent;
+                const isIphone = !!ua.match(/iPhone/i);
+                const isSafari = !!ua.match(/Safari/i) && !ua.match(/CriOS/i) && !ua.match(/FxiOS/i);
+                return isIphone && isSafari;
+            }
+            send() {
+                const self = this;
+
+                // 判斷是否需要顯示 Safari 專用引導
+                if (self.isIosSafari()) {
+                    const $overlay = $('#safari-guide-overlay');
+                    $overlay.css('display', 'flex'); // 修改：用 flex 讓內容置中
+                    
+                    // 使用原生 JS 取得元素，確保萬無一失
+                    const confirmBtn = document.getElementById('safari-confirm-btn');
+                    if (confirmBtn) {
+                        // 先清除之前的事件防止重複觸發
+                        confirmBtn.onclick = null;
+                        // 直接使用 onclick 屬性綁定，這在 iOS 上的優先級與穩定度最高
+                        confirmBtn.onclick = function (e) {
+                            e.preventDefault(); // 阻止任何預設行為
+                            $overlay.hide();
+                            self.executeSubmit();
+                        };
+                    }
+                } else {
+                    // 非 Safari 環境直接提交
+                    self.executeSubmit();
+                }
+            }
+
+            // 實際執行的提交動作
+            executeSubmit() {
+                const self = this;
+                self.form.appendTo('body');
+
+                // 為了確保在 Safari 點擊後能成功，我們使用原生 submit
+                const formDom = self.form[0];
+                formDom.submit();
+
+                setTimeout(() => {
+                    self.form.remove();
+                }, 1000);
+            }
+        }
+
+        // === 綁定與執行 ===
+        
+        document.getElementById('startBtn').addEventListener('click', function() {
+            // 建立物件，測試連到 Google
+            const myForm = new iframeform('https://www.google.com/search', '_blank');
+            
+            // 加入測試參數
+            myForm.addParameter('q', 'iOS Safari Form Submit Success');
+            
+            // 執行
+            myForm.send();
+        });
+
+    </script>
+</body>
+</html>
