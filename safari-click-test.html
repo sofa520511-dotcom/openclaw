@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>iOS Safari Click Test</title>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f2f5;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        /* 按鈕樣式 */
+        #confirmBtn {
+            padding: 15px 40px;
+            font-size: 18px;
+            font-weight: bold;
+            color: white;
+            background-color: #007bff;
+            border: none;
+            border-radius: 50px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            
+            /* iOS Safari 關鍵設定 */
+            cursor: pointer; /* 讓 iOS 知道這是可點擊元素 */
+            -webkit-tap-highlight-color: transparent; /* 移除點擊時的灰色背景 */
+            -webkit-appearance: none; /* 移除 iOS 預設按鈕外觀 */
+            touch-action: manipulation; /* 優化觸控反應 */
+            transition: transform 0.1s, background-color 0.2s;
+        }
+
+        #confirmBtn:active {
+            transform: scale(0.95);
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+
+    <button id="confirmBtn">確認執行 (Click Me)</button>
+
+    <script>
+        // 取得按鈕元素
+        var confirmBtn = document.getElementById('confirmBtn');
+
+        // 綁定 onclick 事件 (iOS Safari 支援)
+        confirmBtn.onclick = function() {
+            // 這裡執行您的邏輯
+            alert('🎉 成功！這個按鈕在 iPhone Safari 上也能執行。');
+            
+            // 如果需要導頁或送出資料，寫在這裡
+            console.log('Button clicked.');
+        };
+
+        // 額外保險：如果 onclick 在某些極端舊版 iOS 失效，可以用 touchstart 輔助 (通常不需要)
+        // confirmBtn.addEventListener('touchstart', function() {}, false); 
+    </script>
+
+</body>
+</html>
