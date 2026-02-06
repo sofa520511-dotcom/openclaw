@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>彈跳視窗範例</title>
+    <style>
+        /* 基本樣式 */
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f2f5;
+        }
+
+        /* 按鈕樣式 */
+        .btn-open {
+            padding: 12px 24px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s;
+        }
+
+        .btn-open:hover {
+            background-color: #0056b3;
+        }
+
+        /* 彈跳視窗遮罩層 (Modal Overlay) */
+        .modal-overlay {
+            display: none; /* 預設隱藏 */
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5); /* 半透明黑色背景 */
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        /* 彈跳視窗本體 (Modal Content) */
+        .modal-content {
+            background-color: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            max-width: 400px;
+            width: 90%;
+            text-align: center;
+            transform: translateY(-20px);
+            transition: transform 0.3s ease;
+        }
+
+        /* 顯示狀態 */
+        .modal-overlay.show {
+            display: flex;
+            opacity: 1;
+        }
+
+        .modal-overlay.show .modal-content {
+            transform: translateY(0);
+        }
+
+        /* 關閉按鈕 */
+        .btn-close {
+            margin-top: 20px;
+            padding: 10px 20px;
+            background-color: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .btn-close:hover {
+            background-color: #a71d2a;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 觸發按鈕 -->
+    <button class="btn-open" onclick="openModal()">打開彈跳視窗</button>
+
+    <!-- 彈跳視窗結構 -->
+    <div class="modal-overlay" id="myModal">
+        <div class="modal-content">
+            <h2>🎉 成功彈出！</h2>
+            <p>這是一個簡單又好看的彈跳視窗範例。</p>
+            <p>您可以把重要的訊息放在這裡。</p>
+            <button class="btn-close" onclick="closeModal()">關閉</button>
+        </div>
+    </div>
+
+    <script>
+        // 開啟視窗
+        function openModal() {
+            const modal = document.getElementById('myModal');
+            modal.style.display = 'flex';
+            // 使用 setTimeout 讓 CSS transition 有效
+            setTimeout(() => {
+                modal.classList.add('show');
+            }, 10);
+        }
+
+        // 關閉視窗
+        function closeModal() {
+            const modal = document.getElementById('myModal');
+            modal.classList.remove('show');
+            // 等待動畫結束後再隱藏
+            setTimeout(() => {
+                modal.style.display = 'none';
+            }, 300);
+        }
+
+        // 點擊遮罩層也可以關閉
+        window.onclick = function(event) {
+            const modal = document.getElementById('myModal');
+            if (event.target == modal) {
+                closeModal();
+            }
+        }
+    </script>
+
+</body>
+</html>
