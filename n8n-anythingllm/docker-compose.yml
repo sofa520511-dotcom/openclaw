@@ -1,0 +1,72 @@
+version: '3.8'
+
+services:
+  # ----------------------------------------------------------------
+  # 1. AnythingLLM - 全能 RAG 知識庫管理系統
+  # ----------------------------------------------------------------
+  anythingllm:
+    image: mintplexlabs/anythingllm:master
+    container_name: anythingllm
+    ports:
+      - "3001:3001"
+    cap_add:
+      - SYS_ADMIN
+    environment:
+      # 這裡設定資料儲存路徑
+      - STORAGE_DIR=/app/server/storage
+      - JWT_SECRET=PLEASE_CHANGE_THIS_SECRET_TO_SOMETHING_SECURE
+      - LLM_PROVIDER=openai # 預設 OpenAI，可改 ollama
+      - VECTOR_DB=lancedb # 預設使用內建 LanceDB (最簡單)
+    volumes:
+      - ./anythingllm_storage:/app/server/storage
+      - ./env.d/anythingllm.env:/app/server/.env
+    restart: unless-stopped
+    networks:
+      - ai-automation-net
+
+  # ----------------------------------------------------------------
+  # 2. n8n - 工作流自動化引擎 (Workflow Automation)
+  # ----------------------------------------------------------------
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: n8n
+    ports:
+      - "5678:5678"
+    environment:
+      - N8N_BASIC_AUTH_ACTIVE=true
+      - N8N_BASIC_AUTH_USER=admin
+      - N8N_BASIC_AUTH_PASSWORD=password # 請務必修改
+      - N8N_HOST=localhost
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=http
+      - WEBHOOK_URL=http://localhost:5678/
+      - GENERIC_TIMEZONE=Asia/Taipei
+    volumes:
+      - ./n8n_data:/home/node/.n8n
+    restart: unless-stopped
+    networks:
+      - ai-automation-net
+
+  # ----------------------------------------------------------------
+  # 3. Ollama (Optional) - 如果想跑本地 LLM 模型
+  # ----------------------------------------------------------------
+  # ollama:
+  #   image: ollama/ollama:latest
+  #   container_name: ollama
+  #   ports:
+  #     - "11434:11434"
+  #   volumes:
+  #     - ./ollama_data:/root/.ollama
+  #   networks:
+  #     - ai-automation-net
+  #   deploy:
+  #     resources:
+  #       reservations:
+  #         devices:
+  #           - driver: nvidia
+  #             count: 1
+  #             capabilities: [gpu]
+
+networks:
+  ai-automation-net:
+    driver: bridge
