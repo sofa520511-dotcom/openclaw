@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>靈活切換：編輯與預覽無縫接軌</title>
+    <style>
+        :root {
+            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --header-bg: #e0e7ff;
+            --tab-active-bg: #fff;
+            --tab-inactive-bg: #ced4da;
+            --text-color: #333;
+            --border-radius: 12px;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f7f6;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            color: var(--text-color);
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1000px;
+            background: #fff;
+            border-radius: var(--border-radius);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            overflow: hidden;
+            border: 1px solid #d1d5db;
+        }
+
+        /* 頂部標題與 Tab */
+        .header {
+            background: url('https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=1920&auto=format&fit=crop') no-repeat center/cover;
+            padding: 40px 20px 0; /* 下方留空給 Tabs */
+            position: relative;
+            color: white;
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0, 51, 102, 0.8); /* 深藍遮罩 */
+        }
+
+        .header-content {
+            position: relative;
+            z-index: 1;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 28px;
+            letter-spacing: 1px;
+        }
+
+        .tabs {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            position: relative;
+            z-index: 2;
+            bottom: -1px; /* 蓋住邊框 */
+        }
+
+        .tab-btn {
+            padding: 12px 30px;
+            border: none;
+            border-radius: 12px 12px 0 0;
+            background: rgba(255, 255, 255, 0.3);
+            color: #ddd;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(5px);
+        }
+
+        .tab-btn.active {
+            background: #fff;
+            color: #333;
+            box-shadow: 0 -4px 10px rgba(0,0,0,0.1);
+        }
+
+        .tab-btn:hover:not(.active) {
+            background: rgba(255, 255, 255, 0.5);
+            color: #fff;
+        }
+
+        /* 內容區域 */
+        .content-area {
+            display: flex;
+            background: #fff;
+            min-height: 500px;
+            position: relative;
+        }
+
+        /* 左側：編輯區 */
+        .editor-panel {
+            flex: 1;
+            padding: 30px;
+            background: #f8fafc;
+            border-right: 1px solid #e2e8f0;
+            display: none; /* JS 切換 */
+        }
+
+        .editor-panel.active {
+            display: block;
+            animation: fadeIn 0.3s;
+        }
+
+        /* 右側：預覽區 */
+        .preview-panel {
+            flex: 1;
+            padding: 30px;
+            display: none; /* JS 切換 */
+            background: #fff;
+        }
+
+        .preview-panel.active {
+            display: block;
+            animation: fadeIn 0.3s;
+        }
+
+        /* 雙欄模式 (Split View) */
+        .split-view .editor-panel,
+        .split-view .preview-panel {
+            display: block;
+            width: 50%;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* 表單樣式 */
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #4a5568;
+        }
+
+        .form-row {
+            display: flex;
+            gap: 15px;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #cbd5e0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.2s;
+            box-sizing: border-box;
+        }
+
+        .form-control:focus {
+            border-color: #667eea;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        /* 地號資訊區塊 */
+        .land-info-card {
+            background: #edf2f7;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .land-item {
+            display: flex;
+            align-items: center;
+            background: #fff;
+            padding: 8px 12px;
+            margin-bottom: 8px;
+            border-radius: 6px;
+            border: 1px solid #cbd5e0;
+        }
+
+        .land-item span {
+            flex-grow: 1;
+        }
+
+        .btn-remove {
+            background: #fc8181;
+            color: white;
+            border: none;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            line-height: 1;
+        }
+
+        .btn-add {
+            width: 100%;
+            padding: 10px;
+            background: #fff;
+            border: 1px dashed #a0aec0;
+            color: #718096;
+            border-radius: 6px;
+            cursor: pointer;
+            margin-top: 5px;
+        }
+
+        .btn-add:hover {
+            border-color: #667eea;
+            color: #667eea;
+        }
+
+        /* 預覽文件樣式 */
+        .doc-preview {
+            border: 1px solid #e2e8f0;
+            padding: 40px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            min-height: 100%;
+            background: #fff;
+            font-family: "SimSun", "PMingLiU", serif; /* 模擬公文 */
+        }
+
+        .doc-title {
+            text-align: center;
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #000;
+            padding-bottom: 10px;
+        }
+
+        .doc-row {
+            margin-bottom: 15px;
+            line-height: 1.6;
+            font-size: 16px;
+        }
+
+        .doc-label {
+            font-weight: bold;
+            display: inline-block;
+            width: 100px;
+        }
+
+        .doc-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        .doc-table th, .doc-table td {
+            border: 1px solid #000;
+            padding: 8px;
+            text-align: center;
+        }
+
+        /* 中間的切換按鈕 (僅在特定寬度下顯示或作為裝飾) */
+        .switch-indicator {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            background: var(--primary-gradient);
+            color: white;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 15px rgba(118, 75, 162, 0.4);
+            z-index: 10;
+            cursor: pointer;
+            transition: transform 0.5s;
+        }
+        
+        .switch-indicator i {
+            font-size: 24px;
+        }
+
+        .switch-indicator:hover {
+            transform: translate(-50%, -50%) rotate(180deg);
+        }
+
+        /* RWD: 手機版隱藏 Split 模式，強制切換 */
+        @media (max-width: 768px) {
+            .split-view .editor-panel, 
+            .split-view .preview-panel {
+                width: 100%;
+            }
+            /* 手機版不支援並排，強制 Tab 切換 */
+            .editor-panel, .preview-panel {
+                display: none !important;
+            }
+            .editor-panel.active, .preview-panel.active {
+                display: block !important;
+            }
+            .switch-indicator {
+                display: none;
+            }
+        }
+    </style>
+    <!-- 引入 FontAwesome 圖示 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <div class="header-content">
+            <h1>靈活切換：編輯與預覽無縫接軌</h1>
+            <p>無需關閉視窗，即時檢查產製結果。</p>
+        </div>
+        
+        <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab('edit')">編輯模式</button>
+            <button class="tab-btn" onclick="switchTab('preview')">預覽模式</button>
+            <!-- 委託書 Tab 暫時作為裝飾或擴充用 -->
+            <button class="tab-btn" onclick="alert('功能開發中')">委託書</button>
+        </div>
+    </div>
+
+    <div class="content-area split-view" id="contentArea">
+        
+        <!-- 左側：編輯區 -->
+        <div class="editor-panel active" id="editPanel">
+            <h3 style="color: #667eea; border-left: 4px solid #667eea; padding-left: 10px;">編輯內容</h3>
+            
+            <div class="form-group">
+                <label>案件名稱</label>
+                <input type="text" class="form-control" id="inputCaseName" placeholder="請輸入案件名稱" value="Case-2026-001" oninput="updatePreview()">
+            </div>
+
+            <div class="form-row">
+                <div class="form-group" style="flex: 1;">
+                    <label>申請人</label>
+                    <input type="text" class="form-control" id="inputApplicant" placeholder="張三" value="雷霸龍" oninput="updatePreview()">
+                </div>
+                <div class="form-group" style="flex: 1;">
+                    <label>聯絡電話</label>
+                    <input type="text" class="form-control" id="inputPhone" placeholder="09xx-xxxxxx" value="0912-345678" oninput="updatePreview()">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>案址</label>
+                <input type="text" class="form-control" id="inputAddress" placeholder="請輸入案號、地址" value="新北市板橋區中山路一段161號" oninput="updatePreview()">
+            </div>
+
+            <div class="form-group">
+                <label>地號資訊</label>
+                <div class="land-info-card">
+                    <div id="landList">
+                        <div class="land-item"><span>📍 板橋段 100-1 地號</span> <button class="btn-remove" onclick="removeLand(this)">&minus;</button></div>
+                        <div class="land-item"><span>📍 板橋段 100-2 地號</span> <button class="btn-remove" onclick="removeLand(this)">&minus;</button></div>
+                    </div>
+                    <button class="btn-add" onclick="addLand()">+ 新增地號</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 中間裝飾按鈕 (模擬切換) -->
+        <div class="switch-indicator" onclick="toggleSplitView()" title="切換 單欄/雙欄 檢視">
+            <i class="fas fa-sync-alt"></i>
+        </div>
+
+        <!-- 右側：預覽區 -->
+        <div class="preview-panel active" id="previewPanel">
+            <div class="doc-preview">
+                <div class="doc-title">案件明細表</div>
+                
+                <div class="doc-row">
+                    <span class="doc-label">案件名稱：</span>
+                    <span id="prevCaseName">Case-2026-001</span>
+                </div>
+                <div class="doc-row">
+                    <span class="doc-label">申請人：</span>
+                    <span id="prevApplicant">雷霸龍</span>
+                </div>
+                <div class="doc-row">
+                    <span class="doc-label">聯絡電話：</span>
+                    <span id="prevPhone">0912-345678</span>
+                </div>
+                <div class="doc-row">
+                    <span class="doc-label">案址：</span>
+                    <span id="prevAddress">新北市板橋區中山路一段161號</span>
+                </div>
+
+                <div class="doc-row" style="margin-top: 30px;">
+                    <span class="doc-label">地號清單：</span>
+                    <table class="doc-table">
+                        <thead>
+                            <tr>
+                                <th>序號</th>
+                                <th>地段地號</th>
+                                <th>備註</th>
+                            </tr>
+                        </thead>
+                        <tbody id="prevLandTable">
+                            <!-- JS 動態生成 -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <div style="margin-top: 50px; text-align: right;">
+                    <p>列印日期：2026-02-09</p>
+                    <p>承辦單位：新北市城鄉發展局</p>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script>
+    // 初始化
+    document.addEventListener('DOMContentLoaded', () => {
+        updatePreview();
+    });
+
+    // Tab 切換邏輯
+    function switchTab(mode) {
+        // 更新按鈕狀態
+        document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+        event.target.classList.add('active');
+
+        const contentArea = document.getElementById('contentArea');
+        const editPanel = document.getElementById('editPanel');
+        const previewPanel = document.getElementById('previewPanel');
+
+        // 如果是寬螢幕，預設可能想看 Split View，但點 Tab 強制切換單一視圖
+        contentArea.classList.remove('split-view');
+
+        if (mode === 'edit') {
+            editPanel.classList.add('active');
+            previewPanel.classList.remove('active');
+            editPanel.style.display = 'block';
+            previewPanel.style.display = 'none';
+        } else {
+            editPanel.classList.remove('active');
+            previewPanel.classList.add('active');
+            editPanel.style.display = 'none';
+            previewPanel.style.display = 'block';
+        }
+    }
+
+    // 切換雙欄/單欄 (中間圓形按鈕)
+    function toggleSplitView() {
+        const contentArea = document.getElementById('contentArea');
+        const editPanel = document.getElementById('editPanel');
+        const previewPanel = document.getElementById('previewPanel');
+
+        contentArea.classList.toggle('split-view');
+        
+        // 如果切換回 split view，兩個都要顯示
+        if (contentArea.classList.contains('split-view')) {
+            editPanel.style.display = 'block';
+            previewPanel.style.display = 'block';
+            editPanel.classList.add('active');
+            previewPanel.classList.add('active');
+        } else {
+            // 切回單欄，預設回編輯
+            switchTab('edit');
+            document.querySelector('.tab-btn:first-child').click();
+        }
+    }
+
+    // 即時更新預覽 (Data Binding)
+    function updatePreview() {
+        document.getElementById('prevCaseName').innerText = document.getElementById('inputCaseName').value;
+        document.getElementById('prevApplicant').innerText = document.getElementById('inputApplicant').value;
+        document.getElementById('prevPhone').innerText = document.getElementById('inputPhone').value;
+        document.getElementById('prevAddress').innerText = document.getElementById('inputAddress').value;
+
+        // 更新地號列表
+        const landItems = document.querySelectorAll('.land-item span');
+        const tableBody = document.getElementById('prevLandTable');
+        tableBody.innerHTML = ''; // 清空
+
+        landItems.forEach((item, index) => {
+            const row = `<tr>
+                <td>${index + 1}</td>
+                <td>${item.innerText.replace('📍 ', '')}</td>
+                <td>-</td>
+            </tr>`;
+            tableBody.innerHTML += row;
+        });
+    }
+
+    // 模擬新增地號
+    function addLand() {
+        const landName = prompt("請輸入地號 (例如：板橋段 123 號)：");
+        if (landName) {
+            const div = document.createElement('div');
+            div.className = 'land-item';
+            div.innerHTML = `<span>📍 ${landName}</span> <button class="btn-remove" onclick="removeLand(this)">&minus;</button>`;
+            document.getElementById('landList').appendChild(div);
+            updatePreview();
+        }
+    }
+
+    // 刪除地號
+    function removeLand(btn) {
+        btn.parentElement.remove();
+        updatePreview();
+    }
+</script>
+
+</body>
+</html>
