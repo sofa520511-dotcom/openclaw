@@ -2,6 +2,95 @@ import urllib.request
 import json
 import os
 from datetime import datetime
+import cgi
+
+# --- HTML and CSS Template ---
+HTML_TEMPLATE = """
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>台灣運彩盤口自動分析</title>
+    <style>
+        body {{
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            background-color: #f4f4f4;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+        }}
+        .container {{
+            max-width: 900px;
+            margin: auto;
+            background: #fff;
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }}
+        h1, h2 {{
+            color: #2c3e50;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+        }}
+        .game-card {{
+            background: #fdfdfd;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }}
+        .game-title {{
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #34495e;
+            margin-bottom: 10px;
+        }}
+        .game-meta {{
+            font-size: 0.9em;
+            color: #7f8c8d;
+            margin-bottom: 15px;
+        }}
+        .odds-list {{
+            list-style-type: none;
+            padding: 0;
+        }}
+        .odds-list li {{
+            background: #ecf0f1;
+            padding: 8px 12px;
+            border-radius: 3px;
+            margin-bottom: 5px;
+            font-family: "Courier New", Courier, monospace;
+        }}
+        .footer {{
+            text-align: center;
+            margin-top: 30px;
+            font-size: 0.8em;
+            color: #95a5a6;
+        }}
+        .status-no-odds {{
+            color: #e74c3c;
+        }}
+        .status-no-market {{
+             color: #f39c12;
+        }}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>台灣運彩盤口自動分析</h1>
+        <p class="footer">最後更新時間: {update_time}</p>
+        <div id="game-list">
+            {game_cards}
+        </div>
+        <div class="footer">
+            <p>由 ClawBot 自動生成 | 資料來源: 台灣運彩</p>
+        </div>
+    </div>
+</body>
+</html>
+"""
 
 # API Endpoints
 SCHEDULE_URL = "https://blob.sportslottery.com.tw/apidata/Live/BetSchedule.json"
@@ -17,143 +106,129 @@ SPORT_ID_MAP = {
 }
 
 def fetch_json_data(url):
-    """Fetches JSON data from a given URL using urllib and handles potential errors."""
+    """Fetches JSON data from a given URL using urllib."""
     try:
-        # Add a user-agent header to mimic a browser
-        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3'}
+        headers = {'User-Agent': 'Mozilla/5.0'}
         req = urllib.request.Request(url, headers=headers)
         with urllib.request.urlopen(req, timeout=15) as response:
             if response.status != 200:
-                print(f"Error: Received status code {response.status} from {url}")
+                print(f"Error: Status code {response.status} for {url}")
                 return None
-            # Read and decode the response
             data = response.read().decode('utf-8')
             return json.loads(data)
     except Exception as e:
-        print(f"Error fetching data from {url}: {e}")
+        print(f"Error fetching {url}: {e}")
         return None
 
-def find_game_odds(game_id, all_odds_data):
-    """Finds the odds for a specific game ID from the aggregated odds data."""
-    for sport_data in all_odds_data:
-        for game_data in sport_data.get('ms', []):
-             # The game ID from schedule seems to be in 'no' field of the odds data
-            if str(game_data.get('no')) == str(game_id):
-                return game_data
-    return None
-
-def analyze_market(market):
-    """Analyzes a single market (ML, HDC, OU) and returns a formatted string."""
+def analyze_market_html(market):
+    """Analyzes a single market and returns an HTML list item string."""
     market_type = market.get('v')
     choices = market.get('cs', [])
     
     if not choices:
         return ""
 
-    if market_type == "ML": # 不讓分
-        if len(choices) >= 2:
-            away_odds = choices[0].get('o', 'N/A')
-            home_odds = choices[1].get('o', 'N/A')
-            return f"不讓分 (客: {away_odds}, 主: {home_odds})"
-        
-    elif market_type == "HDC": # 讓分
-        if len(choices) >= 2:
-            away_team_name = choices[0].get('name', '客隊')
-            home_team_name = choices[1].get('name', '主隊')
-            handicap = choices[0].get('hv', '')
-            away_odds = choices[0].get('o', 'N/A')
-            home_odds = choices[1].get('o', 'N/A')
-            return f"讓分 ({away_team_name} {handicap} @ {away_odds}, {home_team_name} @ {home_odds})"
+    # Sanitize inputs to prevent XSS if ever used in a more complex web app
+    escape = cgi.escape
 
-    elif market_type == "OU": # 大小
+    if market_type == "ML":
         if len(choices) >= 2:
-            total_value = choices[0].get('v', '')
-            over_odds = choices[0].get('o', 'N/A')
-            under_odds = choices[1].get('o', 'N/A')
-            return f"大小 ({total_value} - 大: {over_odds}, 小: {under_odds})"
+            away_odds = escape(str(choices[0].get('o', 'N/A')))
+            home_odds = escape(str(choices[1].get('o', 'N/A')))
+            return f"<li><strong>不讓分</strong> &nbsp; 客: {away_odds} | 主: {home_odds}</li>"
+        
+    elif market_type == "HDC":
+        if len(choices) >= 2:
+            away_team_name = escape(choices[0].get('name', '客隊'))
+            home_team_name = escape(choices[1].get('name', '主隊'))
+            handicap = escape(str(choices[0].get('hv', '')))
+            away_odds = escape(str(choices[0].get('o', 'N/A')))
+            home_odds = escape(str(choices[1].get('o', 'N/A')))
+            return f"<li><strong>讓分</strong> &nbsp; {away_team_name} ({handicap}) @ {away_odds} | {home_team_name} @ {home_odds}</li>"
+
+    elif market_type == "OU":
+        if len(choices) >= 2:
+            total_value = escape(str(choices[0].get('v', '')))
+            over_odds = escape(str(choices[0].get('o', 'N/A')))
+            under_odds = escape(str(choices[1].get('o', 'N/A')))
+            return f"<li><strong>大小</strong> &nbsp; ({total_value}) - 大: {over_odds} | 小: {under_odds}</li>"
             
     return ""
 
-
 def main():
-    """Main function to run the analysis."""
-    print("開始抓取運彩盤口資料...")
+    """Main function to run the analysis and generate index.html."""
+    print("Starting odds analysis...")
 
-    # 1. Fetch all available odds data first
     all_odds = []
-    print("正在獲取所有運動的盤口資料...")
     for sport_name, sport_id in SPORT_ID_MAP.items():
-        print(f"- 正在抓取 {sport_name} (ID: {sport_id})")
+        print(f"- Fetching odds for {sport_name} (ID: {sport_id})")
         odds_url = ODDS_URL_TEMPLATE.format(sport_id=sport_id)
         sport_odds_data = fetch_json_data(odds_url)
         if sport_odds_data:
             all_odds.extend(sport_odds_data)
     
     if not all_odds:
-        print("無法獲取任何盤口資料，程式中止。")
+        print("Could not fetch any odds data. Aborting.")
         return
 
-    # Create a lookup dictionary for faster access
     odds_map = {str(game.get('no')): game for game in all_odds if game.get('no')}
     
-    print("\n盤口資料抓取完畢，開始獲取賽程...")
+    print("Fetching schedule...")
     schedule_data = fetch_json_data(SCHEDULE_URL)
     if not schedule_data or 'list' not in schedule_data:
-        print("無法獲取賽程資料，程式中止。")
+        print("Could not fetch schedule data. Aborting.")
         return
         
     games_list = schedule_data['list']
-    print(f"成功獲取 {len(games_list)} 場賽事，開始進行分析...")
+    print(f"Found {len(games_list)} games. Starting analysis...")
     
-    report_lines = [
-        f"# 台灣運彩盤口分析報告",
-        f"報告生成時間: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
-        "---"
-    ]
-
-    # 2. Iterate through the schedule and find matching odds using the map
+    game_cards_html = []
     for game in games_list:
         game_id = game.get('id')
         if not game_id:
             continue
             
-        sport = game.get('sn', '未知運動')
-        league = game.get('ln', '未知聯賽')
-        away_team = game.get('atn', '客隊')
-        home_team = game.get('htn', '主隊')
+        sport = cgi.escape(game.get('sn', '未知運動'))
+        league = cgi.escape(game.get('ln', '未知聯賽'))
+        away_team = cgi.escape(game.get('atn', '客隊'))
+        home_team = cgi.escape(game.get('htn', '主隊'))
         
-        game_title = f"### {sport} - {league}: {away_team} vs {home_team}"
-        report_lines.append(game_title)
+        card = '<div class="game-card">'
+        card += f'<div class="game-meta">{sport} - {league}</div>'
+        card += f'<div class="game-title">{away_team} vs {home_team}</div>'
+        card += '<ul class="odds-list">'
 
-        # Efficiently find the game's odds data from the map
         game_odds_data = odds_map.get(str(game_id))
         
         if game_odds_data and 'ms' in game_odds_data:
             markets = game_odds_data['ms']
-            conclusions = []
-            for market in markets:
-                analysis = analyze_market(market)
-                if analysis:
-                    conclusions.append(f"- {analysis}")
+            market_html_parts = [analyze_market_html(m) for m in markets]
+            market_html_parts = [p for p in market_html_parts if p] # Filter out empty strings
             
-            if conclusions:
-                report_lines.extend(conclusions)
+            if market_html_parts:
+                card += "".join(market_html_parts)
             else:
-                report_lines.append("- 暫無可用盤口分析。")
+                card += '<li class="status-no-market">暫無可用盤口分析。</li>'
         else:
-            report_lines.append("- 未找到對應的盤口資料。")
+            card += '<li class="status-no-odds">未找到對應的盤口資料。</li>'
             
-        report_lines.append("") # Add a blank line for spacing
+        card += '</ul></div>'
+        game_cards_html.append(card)
 
-    # Write report to file
-    report_filename = "odds_analysis_report.md"
+    # Assemble the final HTML
+    final_html = HTML_TEMPLATE.format(
+        update_time=datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+        game_cards="".join(game_cards_html)
+    )
+
+    # Write to index.html
+    report_filename = "index.html"
     try:
         with open(report_filename, 'w', encoding='utf-8') as f:
-            f.write("\n".join(report_lines))
-        print(f"\n分析完成！報告已儲存至 {os.path.abspath(report_filename)}")
+            f.write(final_html)
+        print(f"\nAnalysis complete! Report saved to {os.path.abspath(report_filename)}")
     except IOError as e:
-        print(f"寫入報告檔案時發生錯誤: {e}")
-
+        print(f"Error writing report file: {e}")
 
 if __name__ == "__main__":
     main()

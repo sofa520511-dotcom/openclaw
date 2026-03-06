@@ -1,0 +1,34 @@
+# .github/workflows/update_odds.yml
+
+name: Update Sports Odds Analysis
+
+on:
+  schedule:
+    # Runs every hour
+    - cron: '0 * * * *'
+  workflow_dispatch: # Allows manual triggering
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+
+      - name: Run analysis script
+        id: run_script
+        run: python3 analyze_odds.py
+
+      - name: Commit and push changes
+        run: |
+          git config --global user.name 'GitHub Actions Bot'
+          git config --global user.email 'actions-bot@github.com'
+          git add index.html
+          # Only commit and push if there are changes
+          git diff --quiet && git diff --staged --quiet || (git commit -m "Automated odds update" && git push)
