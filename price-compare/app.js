@@ -720,7 +720,6 @@ function applyPreset(id) {
   const preset = PRESETS.find((item) => item.id === id);
   if (!preset) return;
   state.basket = preset.items.map((item) => ({ id: item.id, qty: item.qty }));
-  toast(`已套用範例「${preset.title}」`);
   commit();
   document.getElementById('results').scrollIntoView({ behavior: motion(), block: 'start' });
 }
