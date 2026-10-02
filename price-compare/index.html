@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>合購比 — 一次比最多 5 樣商品</title>
+  <meta name="description" content="一次把最多 5 樣商品放進比價籃，找出同時有賣的網站，並比較含運總額哪一家最便宜。">
+  <meta name="theme-color" content="#c2410c">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23c2410c'/%3E%3Cpath d='M9 13h14l-1.4 9.2a2 2 0 0 1-2 1.8H12.4a2 2 0 0 1-2-1.8L9 13z' fill='none' stroke='white' stroke-width='1.8'/%3E%3Cpath d='M13 13c0-2.4 1.3-4 3-4s3 1.6 3 4' fill='none' stroke='white' stroke-width='1.8' stroke-linecap='round'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <a class="skip" href="#main">跳到主要內容</a>
+  <div class="sticky-top">
+    <div class="wrap">
+      <header>
+        <a class="brand" href="./">
+          <span class="logo" aria-hidden="true">
+            <svg viewBox="0 0 32 32" width="36" height="36">
+              <rect width="32" height="32" rx="9" fill="#c2410c"/>
+              <path d="M9 13h14l-1.4 9.2a2 2 0 0 1-2 1.8H12.4a2 2 0 0 1-2-1.8L9 13z" fill="none" stroke="#fff" stroke-width="1.8"/>
+              <path d="M13 13c0-2.4 1.3-4 3-4s3 1.6 3 4" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/>
+            </svg>
+          </span>
+          <span class="brand-text">
+            <strong>合購比</strong>
+            <small>多商品比價</small>
+          </span>
+        </a>
+        <form id="search-form" role="search">
+          <label class="sr-only" for="search">搜尋商品</label>
+          <svg class="search-icon" viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="2"/>
+            <path d="M16 16l5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+          <input id="search" type="search" placeholder="搜尋商品、品牌或分類，例如：吹風機、原子習慣" autocomplete="off" enterkeyhint="search">
+          <button type="button" id="search-clear" hidden>清除</button>
+        </form>
+        <div class="basket-count">
+          <span>比價籃</span>
+          <strong id="basket-count">0/5</strong>
+        </div>
+      </header>
+      <div id="basket-bar" class="basket-bar"></div>
+    </div>
+  </div>
+
+  <main id="main" class="wrap">
+    <section class="hero" id="hero">
+      <div class="hero-grid">
+        <div class="hero-copy">
+          <p class="eyebrow">多商品同時比價</p>
+          <h1>列出最多 5 樣，找出最便宜的賣家</h1>
+          <p class="lede">把想一起買的商品放進比價籃。合購比會找出同時有賣的網站，並用含運總額算出在哪一家一次買齊最便宜。</p>
+          <ol class="steps">
+            <li><span>1</span>列出最多 5 樣商品</li>
+            <li><span>2</span>找出同時有販售的賣家</li>
+            <li><span>3</span>比較含運總額，標出最便宜</li>
+          </ol>
+          <p class="note">價格、運費與是否有貨都是內建範例，用來試算流程，不是各網站的即時報價。你也可以自行填入看到的價格。</p>
+        </div>
+        <aside id="hero-preview" aria-label="通勤 3C 比價範例"></aside>
+      </div>
+      <div id="presets" class="presets"></div>
+    </section>
+
+    <p id="live-summary" class="sr-only" aria-live="polite"></p>
+    <section id="results"></section>
+
+    <section id="catalog">
+      <div class="section-head">
+        <h2>商品目錄</h2>
+        <p id="catalog-meta"></p>
+        <p id="grid-count"></p>
+      </div>
+      <div class="toolbar">
+        <div id="categories" class="chips" role="group" aria-label="商品分類"></div>
+        <div class="toolbar-row">
+          <div id="suggestions" class="chips" role="group" aria-label="熱門搜尋"></div>
+          <button type="button" class="primary" data-open-custom>自行填入價格</button>
+        </div>
+      </div>
+      <div id="grid" class="grid"></div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="wrap">
+      <p>合購比讓你一次比較最多 5 樣商品，找出同時有賣的賣家，並計算含運總額最便宜的網站。示範價格僅供試算，實際購買請以賣家頁面為準。</p>
+    </div>
+  </footer>
+
+  <div id="toast" role="status"></div>
+
+  <dialog id="custom-dialog" aria-labelledby="custom-title">
+    <form id="custom-form">
+      <div class="dialog-body">
+        <h2 id="custom-title">自行填入價格</h2>
+        <p>若目錄沒有你要的商品，填入各賣家的單價。留白代表該賣家沒有賣。</p>
+        <label class="name-field">商品名稱
+          <input name="name" maxlength="40" autocomplete="off" placeholder="例如：某品牌保溫杯">
+        </label>
+        <div id="custom-prices" class="price-grid"></div>
+        <p id="custom-error" role="alert"></p>
+        <div class="dialog-actions">
+          <button type="button" id="custom-cancel">取消</button>
+          <button type="submit" class="primary">加入比價籃</button>
+        </div>
+      </div>
+    </form>
+  </dialog>
+
+  <script src="data.js"></script>
+  <script src="compare.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
